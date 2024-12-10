@@ -17,19 +17,19 @@ public class Login {
         JFrame frame = new JFrame();
         JButton loginButton = new JButton("Login");
         JButton resetButton = new JButton("Reset");
-        JTextField userIDfield = new JTextField();
+        JTextField usernameField = new JTextField();
         JPasswordField userPasswordField = new JPasswordField();
-        JLabel userIDlabel = new JLabel("User ID");
+        JLabel usernameLabel = new JLabel("Username ");
         JLabel userPasswordLabel = new JLabel("Password");
         JLabel messageLabel = new JLabel(" ");
 
-        userIDlabel.setBounds(50,100,75,25);
+        usernameLabel.setBounds(50,100,75,25);
         userPasswordLabel.setBounds(50,150,75,25);
 
         messageLabel.setBounds(125,250,250,35);
         messageLabel.setFont(new Font(null, Font.ITALIC, 25));
 
-        userIDfield.setBounds(125,100,200,25);
+        usernameField.setBounds(125,100,200,25);
         userPasswordField.setBounds(125,150,200,25);
 
         loginButton.setBounds(125,200,100,25);
@@ -40,10 +40,10 @@ public class Login {
         loginButton.setFocusable(false);
 
 
-        frame.add(userIDlabel);
+        frame.add(usernameLabel);
         frame.add(userPasswordLabel);
         frame.add(messageLabel);
-        frame.add(userIDfield);
+        frame.add(usernameField);
         frame.add(userPasswordField);
         frame.add(loginButton);
         frame.add(resetButton);
@@ -56,11 +56,11 @@ public class Login {
 
 
         resetButton.addActionListener(e -> {
-            userIDfield.setText("");
+            usernameField.setText("");
             userPasswordField.setText("");
         });
         loginButton.addActionListener(e -> {
-            String username = userIDfield.getText();
+            String username = usernameField.getText();
             String password = new String(userPasswordField.getPassword());
             new HandleAuth().handleRequest("LOGIN", username, password);
         });

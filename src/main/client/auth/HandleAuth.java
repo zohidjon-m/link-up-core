@@ -1,5 +1,7 @@
 package main.client.auth;
 
+import main.client.server_info_inClient.ServerInfoInClient;
+
 import javax.swing.*;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -7,9 +9,9 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 
-public class HandleAuth {
-   String SERVER_ADDRESS = "127.0.0.1";
-   int SERVER_PORT = 4242;
+public class HandleAuth extends ServerInfoInClient {
+   String SERVER_ADDRESS = getServer_address();
+   int SERVER_PORT = getServer_port();
 
     protected void handleRequest(String requestType, String username, String password) {
         try (Socket socket = new Socket(SERVER_ADDRESS, SERVER_PORT);

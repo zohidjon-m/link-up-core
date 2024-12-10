@@ -59,6 +59,6 @@ public class LinkUpClient{
     }
 
     public static void main(String[] args) {
-        LinkUpClient client = new LinkUpClient();
+        new LinkUpClient();
     }
 }

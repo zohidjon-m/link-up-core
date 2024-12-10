@@ -1,5 +1,7 @@
 package main.server;
 
+import main.server.database.ConDB;
+
 import java.io.*;
 import java.net.*;
 import java.sql.*;
@@ -9,8 +11,9 @@ public class LinkUpServer {
     protected static Connection connection;
 
     public static void main(String[] args) {
+
         // Connect to MySQL database
-        connectToDatabase();
+       connection =  new ConDB().connectToDatabase();
 
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
             System.out.println("Server is running on port " + PORT);
@@ -24,22 +27,22 @@ public class LinkUpServer {
         }
     }
 
-    private static void connectToDatabase() {
-        try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-
-            String url = "jdbc:mysql://localhost:3306/linkup_db";
-            String user = "root";
-            String password = "M@xsmith2020";
-            connection = DriverManager.getConnection(url, user, password);
-            System.out.println("Database connected successfully!");
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
-        }
-
-    }
+//    private static void connectToDatabase() {
+//        try {
+//            Class.forName("com.mysql.cj.jdbc.Driver");
+//
+//            String url = "jdbc:mysql://localhost:3306/linkup_db";
+//            String user = "root";
+//            String password = "M@xsmith2020";
+//            connection = DriverManager.getConnection(url, user, password);
+//            System.out.println("Database connected successfully!");
+//        } catch (SQLException e) {
+//            e.printStackTrace();
+//        } catch (ClassNotFoundException e) {
+//            throw new RuntimeException(e);
+//        }
+//
+//    }
 
     static class ClientHandler extends Thread {
         private Socket socket;
