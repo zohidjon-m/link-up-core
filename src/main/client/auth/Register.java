@@ -1,6 +1,11 @@
 package main.client.auth;
 
+import com.google.gson.JsonObject;
+import main.client.utility.ClientUtil;
+
 import javax.swing.*;
+
+import java.io.IOException;
 
 import static javax.swing.WindowConstants.DISPOSE_ON_CLOSE;
 
@@ -31,7 +36,31 @@ public class Register {
         registerButton.addActionListener(e -> {
             String username = usernameField.getText();
             String password = new String(passwordField.getPassword());
-           new HandleAuth().handleRequest("REGISTER",username, password);});
+
+            //construct the login request using json
+            try {
+                ClientUtil client = new ClientUtil();
+                JsonObject request = new JsonObject();
+                request.addProperty("action","REGISTER");
+
+                JsonObject data = new JsonObject();
+                data.addProperty("username",username);
+                data.addProperty("password",password);
+                request.add("data",data);
+
+                //Send the request and receive the response
+                JsonObject response = client.sendRequest(request);
+                if(response.get("status").getAsString().equals("SUCCESS")){
+                    JOptionPane.showMessageDialog(null, response.get("message").getAsString());
+
+                }else {
+                    JOptionPane.showMessageDialog(null, response.get("message").getAsString());
+                }
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+
+        });
     }
 
 

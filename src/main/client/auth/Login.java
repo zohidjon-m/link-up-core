@@ -1,5 +1,8 @@
 package main.client.auth;
 
+import com.google.gson.JsonObject;
+import main.client.utility.ClientUtil;
+
 import javax.swing.*;
 import java.awt.*;
 import java.io.*;
@@ -62,35 +65,30 @@ public class Login {
         loginButton.addActionListener(e -> {
             String username = usernameField.getText();
             String password = new String(userPasswordField.getPassword());
-            new HandleAuth().handleRequest("LOGIN", username, password);
+
+            //construct the login request using json
+            try {
+                ClientUtil client = new ClientUtil();
+                JsonObject request = new JsonObject();
+                request.addProperty("action","LOGIN");
+
+                JsonObject data = new JsonObject();
+                data.addProperty("username",username);
+                data.addProperty("password",password);
+                request.add("data",data);
+
+                //Send the request and receive the response
+                JsonObject response = client.sendRequest(request);
+                if(response.get("status").getAsString().equals("SUCCESS")){
+                    JOptionPane.showMessageDialog(null, response.get("message").getAsString());
+
+                }else if (response.get("status").getAsString().equals("ERROR")) {
+                    JOptionPane.showMessageDialog(null, response.get("message").getAsString());
+                }
+
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
         });
     }
-
-
-//   protected static void handleRequest(String requestType, String username, String password) {
-//        try (Socket socket = new Socket(SERVER_ADDRESS, SERVER_PORT);
-//             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-//             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
-//
-//            // Send request type, username, and password
-//            out.println(requestType);
-//            out.println(username);
-//            out.println(password);
-//
-//            // Read server response
-//            String response = in.readLine();
-//            if ("REGISTER_SUCCESS".equalsIgnoreCase(response)) {
-//                JOptionPane.showMessageDialog(null, "Registration Successful!");
-//            } else if ("REGISTER_FAIL".equalsIgnoreCase(response)) {
-//                JOptionPane.showMessageDialog(null, "Registration Failed!");
-//            } else if ("LOGIN_SUCCESS".equalsIgnoreCase(response)) {
-//                JOptionPane.showMessageDialog(null, "Login Successful!");
-//            } else if ("LOGIN_FAIL".equalsIgnoreCase(response)) {
-//                JOptionPane.showMessageDialog(null, "Invalid Credentials!");
-//            }
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//            JOptionPane.showMessageDialog(null, "Server Error!");
-//        }
-//    }
 }

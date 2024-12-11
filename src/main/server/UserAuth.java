@@ -2,30 +2,53 @@ package main.server;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import static main.server.LinkUpServer.connection;
 
 public class UserAuth {
-
-    protected boolean registerUser(String username, String password) {
-        try {
-            String hashedPassword = hashPassword(password);
-            String query = "INSERT INTO Users (username, password) VALUES (?, ?)";
-            PreparedStatement stmt = connection.prepareStatement(query);
-            stmt.setString(1, username);
-            stmt.setString(2, hashedPassword); // Use hashing in real applications!
-            stmt.executeUpdate();
-            return true;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
-        }
+    Connection connection;
+    public UserAuth(Connection con) {
+        this.connection = con;
     }
 
-    protected boolean authenticateUser(String username, String password) {
+    protected boolean registerUser(String username, String password) {
+       boolean result = false;
+        try {
+
+            // Check if the username already exists
+            String checkQuery = "SELECT COUNT(*) FROM Users WHERE username = ?";
+            PreparedStatement checkStmt = connection.prepareStatement(checkQuery);
+            checkStmt.setString(1, username);
+            ResultSet resultSet = checkStmt.executeQuery();
+
+            if (resultSet.next() && resultSet.getInt(1) > 0) {
+                // Username already exists
+                System.out.println("User is already registered.");
+                return false;
+            }else{
+                String hashedPassword = hashPassword(password);
+                String query = "INSERT INTO Users (username, password) VALUES (?, ?)";
+                PreparedStatement stmt = connection.prepareStatement(query);
+                stmt.setString(1, username);
+                stmt.setString(2, hashedPassword); // Use hashing in real applications!
+                stmt.executeUpdate();
+                result =  true;
+            }
+
+
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+
+        }
+        return result;
+    }
+
+    protected int authenticateUser(String username, String password) {
+        int userId = -1;
         try {
             String hashedPassword = hashPassword(password);
             String query = "SELECT * FROM Users WHERE username = ? AND password = ?";
@@ -33,11 +56,16 @@ public class UserAuth {
             stmt.setString(1, username);
             stmt.setString(2, hashedPassword);
             ResultSet rs = stmt.executeQuery();
-            return rs.next();
-        } catch (SQLException e) {
+            if(rs.next()) {
+                userId = rs.getInt("user_id");
+            }
+
+       } catch (SQLException e) {
             e.printStackTrace();
-            return false;
+
+            //send ERROR message
         }
+        return userId;
     }
 
     public static String hashPassword(String password) {
