@@ -2,6 +2,7 @@ package main.client;
 
 import main.client.auth.Login;
 import main.client.auth.Register;
+import main.client.frame_manager.FrameManager;
 
 import javax.swing.*;
 
@@ -10,10 +11,7 @@ import java.io.IOException;
 
 public class LinkUpClient{
 
-
-
-
-    public LinkUpClient() {
+    public JFrame createGUI() {
         JFrame frame = new JFrame();
         frame.setTitle("Welcome to Link Up");
         frame.setSize(600, 500);
@@ -42,23 +40,24 @@ public class LinkUpClient{
 
         // Add action listeners for buttons
         loginButton.addActionListener(e -> {
-            try {
-                new Login();
-            } catch (IOException ex) {
-                throw new RuntimeException(ex);
-            }
+
+            FrameManager.navigateTo(new Login().createGUI());
+
             frame.dispose();
         });
 
         registerButton.addActionListener(e -> {
-            new Register();
+
+            FrameManager.navigateTo(new Register().createGUI());
             frame.dispose();
             // Open the register frame here
         });
 
+        return frame;
+
     }
 
     public static void main(String[] args) {
-        new LinkUpClient();
+    FrameManager.navigateTo(new LinkUpClient().createGUI());
     }
 }

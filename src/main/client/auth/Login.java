@@ -9,14 +9,8 @@ import java.io.*;
 import java.net.*;
 
 public class Login {
-//    private static final String SERVER_ADDRESS = "localhost";
-//    private static final int SERVER_PORT = 4242;
 
-    public Login() throws IOException {
-        SwingUtilities.invokeLater(Login::createGUI);
-    }
-
-    private static void createGUI() {
+    public JFrame createGUI() {
         JFrame frame = new JFrame();
         JButton loginButton = new JButton("Login");
         JButton resetButton = new JButton("Reset");
@@ -90,5 +84,6 @@ public class Login {
                 throw new RuntimeException(ex);
             }
         });
+        return frame;
     }
 }
