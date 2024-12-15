@@ -1,14 +1,19 @@
 package main.client.auth;
 
 import com.google.gson.JsonObject;
+import main.client.chatframe.MainFrame;
+import main.client.frame_manager.FrameManager;
+import main.client.server_info_inClient.ServerInfoInClient;
 import main.client.utility.ClientUtil;
+import main.client.response.ResponeHandler;
 
 import javax.swing.*;
 import java.awt.*;
 import java.io.*;
-import java.net.*;
+
 
 public class Login {
+    String user;
 
     public JFrame createGUI() {
         JFrame frame = new JFrame();
@@ -70,14 +75,22 @@ public class Login {
                 data.addProperty("username",username);
                 data.addProperty("password",password);
                 request.add("data",data);
+             //add user because if it fails to fetch this user's id, it will use username
+                user = username;
 
                 //Send the request and receive the response
                 JsonObject response = client.sendRequest(request);
-                if(response.get("status").getAsString().equals("SUCCESS")){
-                    JOptionPane.showMessageDialog(null, response.get("message").getAsString());
+                if(ResponeHandler.checkResponse(response)){
+                    if(response.has("value")&&(response.get("value").getAsInt() != 0)) {
+                        new ServerInfoInClient().setUserId(response.get("value").getAsInt());
+                        FrameManager.navigateTo(new MainFrame());
 
-                }else if (response.get("status").getAsString().equals("ERROR")) {
-                    JOptionPane.showMessageDialog(null, response.get("message").getAsString());
+                    }else{
+                        new ServerInfoInClient().setUserNameOfCurrent(user);
+                        FrameManager.navigateTo(new MainFrame());
+
+                    }
+
                 }
 
             } catch (IOException ex) {

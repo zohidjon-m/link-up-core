@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import main.client.server_info_inClient.ServerInfoInClient;
 
+import javax.swing.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -19,16 +20,23 @@ public class ClientUtil {
     String SERVER_ADDRESS = serverInfoInClient.getServer_address();
     int SERVER_PORT = serverInfoInClient.getServer_port();
 
-    public ClientUtil() throws IOException {
-        socket = new Socket(SERVER_ADDRESS, SERVER_PORT);
-        out = new PrintWriter(socket.getOutputStream(), true);
-        in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+    public ClientUtil(){
+        try {
+            socket = new Socket(SERVER_ADDRESS, SERVER_PORT);
+            out = new PrintWriter(socket.getOutputStream(), true);
+            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+        }catch (IOException e){
+            JOptionPane.showMessageDialog(null, "Server didn't accept the connection! \nPleas try later on ...", "Connection", JOptionPane.WARNING_MESSAGE);
+            e.printStackTrace();
+        }
     }
 
 
     public JsonObject sendRequest(JsonObject request) throws IOException {
 
         // Send the json request to server
+        System.out.println(request);
         out.println(request.toString());
 
 

@@ -1,13 +1,22 @@
 package main.server;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.google.gson.reflect.TypeToken;
+import main.server.auth.UserAuth;
 import main.server.database.ConDB;
+import main.server.response.CreateGroup;
+import main.server.response.FetchChats;
+import main.server.response.ResponseHandler;
+import main.server.response.SearchUsers;
+
 
 import java.io.*;
 import java.net.*;
 import java.sql.*;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class LinkUpServer {
@@ -52,7 +61,11 @@ public class LinkUpServer {
                     if (request == null) break;
 
                     System.out.println("Received request: " + request);
-                    handleRequest(request);
+                   try {
+                       handleRequest(request);
+                   }catch (SQLException e){
+                       e.printStackTrace();
+                   }
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -70,7 +83,7 @@ public class LinkUpServer {
                 }
             }
         }
-        private void handleRequest(String request) {
+        private void handleRequest(String request) throws SQLException {
             UserAuth userAuth = new UserAuth(connection);
             ResponseHandler responseHandler = new ResponseHandler(out);
 
@@ -82,13 +95,14 @@ public class LinkUpServer {
             switch (action) {
                 case "LOGIN":
                     int idOfUser = userAuth.authenticateUser(data.get("username").getAsString(), data.get("password").getAsString());
-                    //add idOfUser to online users
-                    onlineUsers.put(idOfUser, out);
-
+                    System.out.println(idOfUser);
                     if(idOfUser != -1) {
                         userId = idOfUser;
                         onlineUsers.put(idOfUser, out);
-                        responseHandler.sendSuccessResponse("Login Successful");
+                        responseHandler.sendSuccessResponse("Login Successful","value",idOfUser);
+                    }else{
+                        responseHandler.sendErrorResponse("User doesn't exist");
+
                     }
 
                     break;
@@ -101,18 +115,50 @@ public class LinkUpServer {
                         responseHandler.sendErrorResponse("User already exists");
                     }
                     break;
-//                case "FETCH_CHATS":
-//                    handleFetchChats();
-//                    break;
+                case "FETCH_CHATS":
+                    JsonObject fetchedChats = new JsonObject();
+                    fetchedChats =null;
+                    //checking whether the currentUserId is exist or not
+                    if(!data.get("currentUserID").isJsonNull() || (data.has("currentUserID")&& (data.get("currentUserID").getAsInt()>0))){
+                         fetchedChats = new FetchChats(connection).fetchChats(data.get("currentUserID").getAsInt());
+                    } else if(data.has("currentUserName")&& !data.get("currentUserName").isJsonNull()){
+                        //
+                       int userid = new FetchChats(connection).getUserIdByUserName(data.get("currentUserName").getAsString());
+                        if(userid!=-1){
+                            fetchedChats = new FetchChats(connection).fetchChats(data.get("currentUserID").getAsInt());
+
+                        }
+                    }
+                    if(fetchedChats!=null){
+                        responseHandler.sendSuccessResponse(null,"data",fetchedChats);
+                    }else{
+                        responseHandler.sendErrorResponse("there is an error while fetching data from database");
+                    }
+
+                    break;
 //                case "FETCH_MESSAGES":
 //                    handleFetchMessages(data.get("chatId").getAsInt());
 //                    break;
-//                case "SEARCH_USER":
-//                    handleSearchUser(data.get("username").getAsString());
+                case "SEARCH_USER":
+                    JsonArray searchedUsers;
+                    searchedUsers = SearchUsers.searchUser(data.get("query").getAsString(),connection);
+                    if(searchedUsers!=null){
+                        responseHandler.sendSuccessResponse("Keys are sent successful","searchedUsers",searchedUsers);
+                    }else{
+                        responseHandler.sendErrorResponse("there is an error during searching other users!");
+                }
+                    break;
+//                case "SEARCH_USERS":
+//
 //                    break;
-//                case "FRIENDS_LIST":
-//                    handleFriendsList();
-//                    break;
+                case "CREATE_GROUP":
+                    //converting JsonArray to list
+                    List<String> members = gson.fromJson(data.get("members"), new TypeToken<List<String>>() {}.getType());
+
+                   new CreateGroup(connection).createGroups(data.get("group_name").getAsString(), members);
+                    responseHandler.sendSuccessResponse("Successfully created the group");
+                    break;
+
 //                case "CHECK_ONLINE":
 //                    handleCheckOnline();
 //                    break;

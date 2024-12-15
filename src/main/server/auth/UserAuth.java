@@ -1,4 +1,4 @@
-package main.server;
+package main.server.auth;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -14,7 +14,7 @@ public class UserAuth {
         this.connection = con;
     }
 
-    protected boolean registerUser(String username, String password) {
+    public boolean registerUser(String username, String password) {
        boolean result = false;
         try {
 
@@ -47,7 +47,7 @@ public class UserAuth {
         return result;
     }
 
-    protected int authenticateUser(String username, String password) {
+    public int authenticateUser(String username, String password) {
         int userId = -1;
         try {
             String hashedPassword = hashPassword(password);

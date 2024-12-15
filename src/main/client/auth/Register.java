@@ -1,6 +1,7 @@
 package main.client.auth;
 
 import com.google.gson.JsonObject;
+import main.client.response.ResponeHandler;
 import main.client.utility.ClientUtil;
 
 import javax.swing.*;
@@ -55,12 +56,7 @@ public class Register {
 
                 //Send the request and receive the response
                 JsonObject response = client.sendRequest(request);
-                if(response.get("status").getAsString().equals("SUCCESS")){
-                    JOptionPane.showMessageDialog(null, response.get("message").getAsString());
-
-                }else {
-                    JOptionPane.showMessageDialog(null, response.get("message").getAsString());
-                }
+                JOptionPane.showMessageDialog(null, response.get("message").getAsString());
             } catch (IOException ex) {
                 throw new RuntimeException(ex);
             }
