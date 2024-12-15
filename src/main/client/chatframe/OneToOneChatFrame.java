@@ -1,14 +1,21 @@
 package main.client.chatframe;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import main.client.response.ResponeHandler;
 import main.client.server_info_inClient.ServerInfoInClient;
+import main.client.utility.ClientUtil;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.sql.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.io.IOException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class OneToOneChatFrame extends JFrame {
 
@@ -20,9 +27,17 @@ public class OneToOneChatFrame extends JFrame {
     private int receiverId = 0; // Receiver's user ID
     private String receiverName; // Receiver's username
 
-    public OneToOneChatFrame(String receiverName) {
+    private Thread messageListenerThread;
+
+    ClientUtil clientUtil = new ClientUtil();
+
+    public OneToOneChatFrame(String receiverName) throws IOException {
         this.currentUserId = ServerInfoInClient.getInstance().getUserId();
         this.receiverName = receiverName;
+        this.receiverId = getReceiverId(receiverName);
+        if(receiverId==-1){
+            throw new IOException("receiverID is -1");
+        }
 
         setTitle("Chat with " + receiverName);
         setSize(600, 800);
@@ -39,7 +54,13 @@ public class OneToOneChatFrame extends JFrame {
         JPanel inputPanel = new JPanel();
         inputPanel.setLayout(new BorderLayout());
         messageField = new JTextField();
+        messageField.addActionListener(e ->{
+            handleSendMessage();
+        });
         sendButton = new JButton("Send");
+        sendButton.addActionListener(e ->{
+            handleSendMessage();
+        });
 
         inputPanel.add(messageField, BorderLayout.CENTER);
         inputPanel.add(sendButton, BorderLayout.EAST);
@@ -49,46 +70,236 @@ public class OneToOneChatFrame extends JFrame {
 
         // Load previous messages
         loadMessages();
+        startMessageListener();
 
-        // Send button action listener
-//        sendButton.addActionListener(e -> sendMessage());
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                if (!sendExecutor.isShutdown()) {
+                    sendExecutor.shutdownNow();
+                }
+                if (!listenExecutor.isShutdown()) {
+                    listenExecutor.shutdownNow();
+                }
+            }
+        });
+
 
         setVisible(true);
     }
 
-    private int getReceiverId(String receiverName){
+    private int getReceiverId(String receiverName) throws IOException {
         JsonObject request = new JsonObject();
+        request.addProperty("action","SEARCH_A_USER");
+        JsonObject data = new JsonObject();
+        data.addProperty("userName",receiverName);
+        request.add("data",data);
+
+        JsonObject response = clientUtil.sendRequest(request);
+        JsonObject responseData  = new JsonObject();
+        int receiverID = -1;
+
+
+        if(ResponeHandler.checkResponse(response)) {
+
+            if (response.has("receiverId") && !response.get("receiverId").isJsonNull()) {
+                receiverID = response.get("receiverId").getAsInt();
+            } else {
+                throw new IOException("Missing 'receiverId' in the response data.");
+            }
+        } else {
+                throw new IOException("Missing 'data' field in the server response.");
+        }
 
 
         // get user id by search user,
-        return 0;
+        return receiverID;
+    }
+    private final ExecutorService sendExecutor = Executors.newSingleThreadExecutor(); // For sending messages
+    private final ExecutorService listenExecutor = Executors.newSingleThreadExecutor(); // For message listening
+
+    private void handleSendMessage() {
+        String messageContent = messageField.getText().trim();
+        if (!messageContent.isEmpty()) {
+            sendButton.setEnabled(false);
+            messageField.setEnabled(false);
+
+            sendExecutor.submit(() -> {
+                try {
+                    sendMessage(messageContent); // Send the message
+                    SwingUtilities.invokeLater(() -> {
+                        sendButton.setEnabled(true);
+                        messageField.setEnabled(true);
+                        addMessageToPanel(messageContent, true, String.valueOf(new Timestamp(System.currentTimeMillis())));
+                        messageField.setText(""); // Clear the input field
+                    });
+                } catch (IOException e) {
+                    SwingUtilities.invokeLater(() -> {
+                        JOptionPane.showMessageDialog(OneToOneChatFrame.this,
+                                "Failed to send the message: " + e.getMessage(),
+                                "Error",
+                                JOptionPane.ERROR_MESSAGE);
+                        sendButton.setEnabled(true);
+                        messageField.setEnabled(true);
+                    });
+                }
+            });
+        }
     }
 
-    private void loadMessages(){
+
+
+
+    private void startMessageListener() {
+        listenExecutor.submit(() -> {
+            try {
+                System.out.println("Starting message listener...");
+                while (!Thread.currentThread().isInterrupted()) {
+                    String serverMessage = clientUtil.getInput(); // Listen for messages
+                    if (serverMessage != null && !serverMessage.isEmpty()) {
+                        JsonObject response = new Gson().fromJson(serverMessage, JsonObject.class);
+                        if (response.has("action") && "NEW_MESSAGE".equals(response.get("action").getAsString())) {
+                            String message = response.get("message").getAsString();
+                            int senderId = response.get("sender_id").getAsInt();
+                            SwingUtilities.invokeLater(() -> {
+                                addMessageToPanel(message, senderId == currentUserId, String.valueOf(new Timestamp(System.currentTimeMillis())));
+                            });
+                        }
+                    }
+                }
+            } catch (IOException e) {
+                System.err.println("Message listener stopped: " + e.getMessage());
+            }
+        });
+    }
+
+
+    private void addMessageToPanel(String messageContent, boolean isSender, String timestamp) {
+        // Outer container for the entire message
+        JPanel messageContainer = new JPanel(new BorderLayout());
+        messageContainer.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10)); // Add spacing between messages
+
+        // Message bubble panel
+        JPanel messageBubble = new JPanel();
+        messageBubble.setLayout(new BoxLayout(messageBubble, BoxLayout.Y_AXIS)); // Stack message text and timestamp vertically
+        messageBubble.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15)); // Padding inside the bubble
+        messageBubble.setOpaque(true);
+        messageBubble.setBackground(isSender ? new Color(173, 216, 230) : new Color(240, 240, 240)); // Colors for sender/receiver
+        messageBubble.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(200, 200, 200), 1), // Subtle border
+                BorderFactory.createEmptyBorder(10, 10, 10, 10) // Inner padding
+        ));
+        messageBubble.setMaximumSize(new Dimension(100, Integer.MAX_VALUE)); // Limit bubble width for readability
+
+        // Message text
+        JLabel messageLabel = new JLabel("<html><p style='width: 300px; margin: 0;'>" + messageContent + "</p></html>");
+        messageLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+        messageLabel.setForeground(Color.BLACK);
+
+        // Timestamp
+        JLabel timestampLabel = new JLabel(timestamp);
+        timestampLabel.setFont(new Font("Arial", Font.ITALIC, 10));
+        timestampLabel.setForeground(Color.GRAY);
+        timestampLabel.setAlignmentX(isSender ? JLabel.RIGHT_ALIGNMENT : JLabel.LEFT_ALIGNMENT); // Align timestamp with the message
+
+        // Add text and timestamp to the bubble
+        messageBubble.add(messageLabel);
+        messageBubble.add(Box.createVerticalStrut(5)); // Spacer between text and timestamp
+        messageBubble.add(timestampLabel);
+
+        // Avatar
+        JLabel avatarLabel = new JLabel();
+        avatarLabel.setPreferredSize(new Dimension(40, 40));
+        avatarLabel.setOpaque(false);
+
+        if (isSender) {
+//            avatarLabel.setIcon(new ImageIcon("path_to_sender_avatar.png")); // Set sender's avatar
+//            messageContainer.add(avatarLabel, BorderLayout.EAST);
+            messageContainer.add(messageBubble, BorderLayout.CENTER);
+        } else {
+//            avatarLabel.setIcon(new ImageIcon("path_to_receiver_avatar.png")); // Set receiver's avatar
+//            messageContainer.add(avatarLabel, BorderLayout.WEST);
+            messageContainer.add(messageBubble, BorderLayout.CENTER);
+        }
+
+        // Add the container to the message panel
+        SwingUtilities.invokeLater(() -> {
+            messagePanel.add(messageContainer);
+            messagePanel.revalidate();
+            messagePanel.repaint();
+            scrollPane.getVerticalScrollBar().setValue(scrollPane.getVerticalScrollBar().getMaximum());
+        });
+    }
+
+
+    private void sendMessage(String message) throws IOException {
         JsonObject request = new JsonObject();
-        request.addProperty("action","FETCH_MESSAGES");
+        request.addProperty("action","SEND_MESSAGE_ONE");
+        JsonObject data = new JsonObject();
+        data.addProperty("senderId",currentUserId);
+        data.addProperty("receiverId",receiverId);
+        data.addProperty("messageContent",message);
+        request.add("data",data);
 
+        JsonObject response =  clientUtil.sendRequest(request);
+        // we can use this part later to notify a user whether the message has sent or not.
+        ResponeHandler.checkResponse(response);
+    }
+
+    private void loadMessages() throws IOException {
+        JsonObject request = new JsonObject();
+        request.addProperty("action","FETCH_MESSAGES_ONE");
+        JsonObject data = new JsonObject();
+        data.addProperty("senderId",currentUserId);
+        data.addProperty("receiverId",receiverId);
+        request.add("data",data);
+
+        JsonObject response = clientUtil.sendRequest(request);
+        if(!response.get("messageArray").isJsonNull()){
+            JsonArray messagesArray = response.getAsJsonArray("messageArray");
+            if (messagesArray.size() > 0) {
+                // Create a list to store messages with timestamps
+                ArrayList<JsonObject> messageList = new ArrayList<>();
+
+                // Populate the list
+                for (int i = 0; i < messagesArray.size(); i++) {
+                    messageList.add(messagesArray.get(i).getAsJsonObject());
+                }
+
+                // Sort messages by timestamp
+                messageList.sort((m1, m2) -> {
+                    String timestamp1 = m1.get("timestamp").getAsString();
+                    String timestamp2 = m2.get("timestamp").getAsString();
+                    return Timestamp.valueOf(timestamp1).compareTo(Timestamp.valueOf(timestamp2));
+                });
+
+                // Display sorted messages
+                for (JsonObject msg : messageList) {
+                    int senderId = msg.get("senderId").getAsInt();
+                    String content = msg.get("content").getAsString();
+                    String timestamp = msg.get("timestamp").getAsString();
+
+
+                    boolean isSender = (senderId == currentUserId);
+                    addMessageToPanel(content, isSender,timestamp);
+                }
+
+            }else{
+                // No messages, display a placeholder message
+                addPlaceholderMessage();
+            }
+        }
 
     }
 
+    private void addPlaceholderMessage() {
+        JLabel placeholderLabel = new JLabel("Start your first conversation!", SwingConstants.CENTER);
+        placeholderLabel.setForeground(Color.GRAY);
+        placeholderLabel.setBorder(BorderFactory.createEmptyBorder(20, 10, 20, 10));
+        placeholderLabel.setFont(new Font("Arial", Font.ITALIC, 14));
 
-
-    // Message class to represent a chat message
-    private static class Message {
-        private int senderId;
-        private String content;
-
-        public Message(int senderId, String content) {
-            this.senderId = senderId;
-            this.content = content;
-        }
-
-        public int getSenderId() {
-            return senderId;
-        }
-
-        public String getContent() {
-            return content;
-        }
+        messagePanel.add(placeholderLabel);
+        messagePanel.revalidate();
+        messagePanel.repaint();
     }
 }

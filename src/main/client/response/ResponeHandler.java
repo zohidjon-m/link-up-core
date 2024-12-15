@@ -10,10 +10,13 @@ public class ResponeHandler {
         if(response!=null) {
             if (response.get("status").getAsString().equals("SUCCESS")) {
                 if (response.has("message") && !response.get("message").isJsonNull()) {
-                    JOptionPane.showMessageDialog(null, response.get("message").getAsString());
+//                    JOptionPane.showMessageDialog(null, response.get("message").getAsString());
+                    System.out.println("response message: "+response.get("message").getAsString());
                     return true;
                 } else {
-                    JOptionPane.showMessageDialog(null, "There is ");
+//                    JOptionPane.showMessageDialog(null, "There is ");
+                    System.out.println("response message: "+response.get("message").getAsString());
+
                 }
 
 

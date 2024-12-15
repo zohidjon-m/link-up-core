@@ -6,10 +6,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 import main.server.auth.UserAuth;
 import main.server.database.ConDB;
-import main.server.response.CreateGroup;
-import main.server.response.FetchChats;
-import main.server.response.ResponseHandler;
-import main.server.response.SearchUsers;
+import main.server.response.*;
 
 
 import java.io.*;
@@ -145,9 +142,39 @@ public class LinkUpServer {
                     }
 
                     break;
-                case "FETCH_MESSAGES":
+                case "FETCH_MESSAGES_ONE":
+                    JsonArray fetchedMsgData = new JsonArray();
+                    fetchedMsgData = new FetchMessages().fetchOneToOneMessage(data.get("senderId").getAsInt(),data.get("receiverId").getAsInt(),connection);
+                    if(fetchedMsgData!=null){
+                        responseHandler.sendSuccessResponse("Successfully fetched", "messageArray",fetchedMsgData);
+                    }else{
+                        responseHandler.sendErrorResponse("there were error in fetching oneToOneMessage data");
+                    }
 
+                    break;
+                case "SEND_MESSAGE_ONE":
+                    int senderId = data.get("senderId").getAsInt();
+                    int receiverId =data.get("receiverId").getAsInt();
+                    String message = data.get("messageContent").getAsString();
+                    boolean saved = new SaveMessages().sendOneToOneMessage(senderId,receiverId,message,connection);
+                    if(saved){
+                        // Server: Send a new message to the recipient's socket
+                        PrintWriter recipientOut = onlineUsers.get(receiverId); // Socket output stream of recipient
+                        if (recipientOut != null) {
+                            JsonObject newMessage = new JsonObject();
+                            newMessage.addProperty("action", "NEW_MESSAGE");
+                            newMessage.addProperty("sender_id", senderId);
+                            newMessage.addProperty("message", message);
 
+                            recipientOut.println(newMessage.toString()); // Send message to recipient
+                            System.out.println("out : "+newMessage.toString());
+                            recipientOut.flush();
+                        }
+                        responseHandler.sendSuccessResponse("Message saved in db successfully");
+
+                    }else{
+                        responseHandler.sendErrorResponse("Message didn't save in db");
+                    }
                     break;
                 case "SEARCH_USERS":
                     JsonArray searchedUsers;

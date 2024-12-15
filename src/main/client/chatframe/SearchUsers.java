@@ -11,7 +11,7 @@ import javax.swing.*;
 import java.util.ArrayList;
 
 public class SearchUsers {
-    public static ArrayList<String> searchUser(String query) {
+    public ArrayList<String> searchUser(String query) {
         ArrayList<String> userList = new ArrayList<>();
         try {
             // Build the request JSON

@@ -2,6 +2,7 @@ package main.client.chatframe;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 import main.client.response.ResponeHandler;
@@ -11,6 +12,8 @@ import main.client.utility.ClientUtil;
 import javax.swing.*;
 import java.io.IOException;
 import java.util.ArrayList;
+
+import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class FetchChats {
@@ -74,7 +77,16 @@ public class FetchChats {
         }
 
         JsonArray oneToOneChatData = responseData.getAsJsonArray("oneToOneChats");
-        return new Gson().fromJson(oneToOneChatData, new TypeToken<ArrayList<String>>() {}.getType());
+       ArrayList<String> chatPartnerNames = new ArrayList<>();
+        for (int i = 0; i < oneToOneChatData.size(); i++) {
+            JsonObject chatObject = oneToOneChatData.get(i).getAsJsonObject();
+            if (chatObject.has("chat_partner_name")) {
+                String chatPartnerName = chatObject.get("chat_partner_name").getAsString();
+                chatPartnerNames.add(chatPartnerName);
+            }
+        }
+        return chatPartnerNames;
+
     }
     public ArrayList<String>getGroupChats(){
         if (responseData == null || !responseData.has("groupChats")) {
@@ -82,7 +94,15 @@ public class FetchChats {
             return new ArrayList<>(); // Return an empty list
         }
         JsonArray groupChatData = responseData.getAsJsonArray("groupChats");
-        return new Gson().fromJson(groupChatData, new TypeToken<ArrayList<String>>() {}.getType());
+        ArrayList<String> groupNames = new ArrayList<>();
+        for (int i = 0; i < groupChatData.size(); i++) {
+            JsonObject chatObject = groupChatData.get(i).getAsJsonObject();
+            if (chatObject.has("group_name")) {
+                String groupName = chatObject.get("group_name").getAsString();
+                groupNames.add(groupName);
+            }
+        }
+        return groupNames;
     }
 
 

@@ -8,6 +8,7 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -100,7 +101,7 @@ public class MainFrame extends JFrame {
 
             @Override
             public void focusLost(FocusEvent e) {
-                if (searchField.getText().isEmpty()) {
+                if (searchField.getText().trim().isEmpty()) {
                     searchField.setText(" /search your friend ...");
                 }
             }
@@ -112,23 +113,9 @@ public class MainFrame extends JFrame {
             }
         });
         searchField.getDocument().addDocumentListener(new DocumentListener() {
-            public void updateSearchResult(){
-                String query = searchField.getText().trim();
-                if(!query.isEmpty()){
-                    ArrayList<String> searchResults = SearchUsers.searchUser(query);
-                    if (searchResults != null) {
-                        updateChatList(searchResults);
-                    } else {
-                        updateChatList(new ArrayList<>()); // Show an empty list if search fails
-                    }
-                }else {
-                    updateChatList(allChats);
-                }
-            }
-
             @Override
             public void insertUpdate(DocumentEvent e) {
-               updateSearchResult();
+                updateSearchResult();
             }
 
             @Override
@@ -140,6 +127,26 @@ public class MainFrame extends JFrame {
             public void changedUpdate(DocumentEvent e) {
                 updateSearchResult();
             }
+            Timer searchDelayTimer;
+            public void updateSearchResult(){
+                if (searchDelayTimer != null && searchDelayTimer.isRunning()) {
+                    searchDelayTimer.stop();
+                }
+
+                searchDelayTimer = new Timer(300, e -> { // Delay of 300 ms
+                    String query = searchField.getText().trim();
+                    if (!query.isEmpty()) {
+                        ArrayList<String> searchResults = new SearchUsers().searchUser(query);
+                        System.out.println("Search Query: " + query + ", Results: " + searchResults);
+                        updateChatList(searchResults != null ? searchResults : new ArrayList<>());
+                    } else {
+                        updateChatList(allChats); // Reset to all chats
+                    }
+                });
+                searchDelayTimer.setRepeats(false);
+                searchDelayTimer.start();
+            }
+
         });
 
         // Create chat list
@@ -155,7 +162,11 @@ public class MainFrame extends JFrame {
                 if (e.getClickCount() == 2) {
                     String selectedChat = chatList.getSelectedValue();
                     if (selectedChat != null) {
-                        openChatFrame(selectedChat);
+                        try {
+                            openChatFrame(selectedChat);
+                        } catch (IOException ex) {
+                            throw new RuntimeException(ex);
+                        }
                     }
                 }else if(e.getClickCount()==1){
                     if(index == chatList.getSelectedIndex()){
@@ -194,9 +205,9 @@ public class MainFrame extends JFrame {
         updateChatList(filteredChats);
     }
 
-    private void openChatFrame(String chatName) {
-        JOptionPane.showMessageDialog(this, "Opening chat with: " + chatName);
-        // TODO: Open the chat frame for the selected chat
+    private void openChatFrame(String chatName) throws IOException {
+//        JOptionPane.showMessageDialog(this, "Opening chat with: " + chatName);
+        new OneToOneChatFrame(chatName);
     }
 
     public static void main(String[] args) {

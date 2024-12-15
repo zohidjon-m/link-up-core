@@ -50,4 +50,7 @@ public class ClientUtil {
         socket.close();
     }
 
+    public String getInput() throws IOException {
+        return in.readLine();
+    }
 }
