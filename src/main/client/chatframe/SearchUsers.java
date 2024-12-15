@@ -12,10 +12,11 @@ import java.util.ArrayList;
 
 public class SearchUsers {
     public static ArrayList<String> searchUser(String query) {
+        ArrayList<String> userList = new ArrayList<>();
         try {
             // Build the request JSON
             JsonObject request = new JsonObject();
-            request.addProperty("action", "SEARCH_USER");
+            request.addProperty("action", "SEARCH_USERS");
             JsonObject data = new JsonObject();
             data.addProperty("query", query);
             request.add("data",data);
@@ -26,15 +27,19 @@ public class SearchUsers {
 
 
             if (ResponeHandler.checkResponse(response)) {
-
-                return new Gson().fromJson(response.get("searchedUsers").getAsJsonArray(),new TypeToken<ArrayList<String>>() {}.getType());
+                // Ensure the "searchedUsers" key exists
+                if (response.has("searchedUsers") && !response.get("searchedUsers").isJsonNull()) {
+                    userList = new Gson().fromJson(response.get("searchedUsers").getAsJsonArray(), new TypeToken<ArrayList<String>>() {}.getType());
+                } else {
+                    System.out.println("No users found for the query: " + query);
+                }
             } else {
-                JOptionPane.showMessageDialog(null,"Error searching users: " + response.get("error").getAsString(),"search",JOptionPane.WARNING_MESSAGE);
+                JOptionPane.showMessageDialog(null,"An error occurred while searching for users.", "Search", JOptionPane.ERROR_MESSAGE);
             }
         } catch (Exception ex) {
             ex.printStackTrace();
         }
-        return null;
+        return userList;
     }
 
 }

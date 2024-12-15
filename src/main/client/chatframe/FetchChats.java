@@ -1,6 +1,7 @@
 package main.client.chatframe;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 import main.client.response.ResponeHandler;
@@ -27,23 +28,36 @@ public class FetchChats {
             JsonObject request = new JsonObject();
             request.addProperty("action","FETCH_CHATS");
             JsonObject data = new JsonObject();
-            if(new ServerInfoInClient().getUserId()!=0) {
-                data.addProperty("currentUserID", new ServerInfoInClient().getUserId());
+            ServerInfoInClient serverInfo = ServerInfoInClient.getInstance();
+
+            if(serverInfo.getUserId()>0) {
+                data.addProperty("currentUserID", serverInfo.getUserId());
+            }else if(serverInfo.getUserNameOfCurrent()!=null){
+                data.addProperty("currentUserName",serverInfo.getUserNameOfCurrent());
             }else{
-                data.addProperty("currentUserName",new ServerInfoInClient().getUserNameOfCurrent());
+                System.out.println("in the client side, both the currentUserID and currentUserName are null");
             }
+
             request.add("data",data);
 
             ClientUtil client = new ClientUtil();
 
             response = client.sendRequest(request);
-            if(ResponeHandler.checkResponse(response)){
-                responseData = response.get("data").getAsJsonObject();
+
+            // Check if the response is valid
+            if (response != null && ResponeHandler.checkResponse(response)) {
+                if (response.has("data") && !response.get("data").isJsonNull()) {
+                    responseData = response.getAsJsonObject("data");
+                } else {
+                    responseData = new JsonObject(); // Initialize an empty JsonObject if "data" is missing
+                }
+            } else {
+                System.out.println("Failed to fetch chats: Response is null or invalid.");
+                responseData = new JsonObject(); // Fallback to an empty JsonObject
             }
-
-
-        }catch (IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
+            responseData = new JsonObject(); // Ensure responseData is never null
         }
     }
 
@@ -54,14 +68,22 @@ public class FetchChats {
         return allChats;
     }
     public ArrayList<String> getOneToOneChats(){
-        JsonObject directChatData = responseData.get("oneToOneChats").getAsJsonObject();
-        oneToOneChats = new Gson().fromJson(directChatData.get("chat_partner_name").getAsJsonArray(),new TypeToken<ArrayList<String>>() {}.getType());
+        if (responseData == null || !responseData.has("oneToOneChats")) {
+            System.out.println("No one-to-one chats found.");
+            return new ArrayList<>(); // Return an empty list
+        }
 
-        return oneToOneChats;
+        JsonArray oneToOneChatData = responseData.getAsJsonArray("oneToOneChats");
+        return new Gson().fromJson(oneToOneChatData, new TypeToken<ArrayList<String>>() {}.getType());
     }
     public ArrayList<String>getGroupChats(){
-        JsonObject groupChatData = responseData.get("groupChats").getAsJsonObject();
-        groupChats = new Gson().fromJson(groupChatData.get("group_name").getAsJsonArray(),new TypeToken<ArrayList<String>>() {}.getType());
-        return groupChats;
+        if (responseData == null || !responseData.has("groupChats")) {
+            System.out.println("No group chats found.");
+            return new ArrayList<>(); // Return an empty list
+        }
+        JsonArray groupChatData = responseData.getAsJsonArray("groupChats");
+        return new Gson().fromJson(groupChatData, new TypeToken<ArrayList<String>>() {}.getType());
     }
+
+
 }

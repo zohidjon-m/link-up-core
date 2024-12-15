@@ -50,21 +50,6 @@ public class MainFrame extends JFrame {
         setVisible(true);
     }
 
-//    private void initializeChats() {
-//        // Sample chats
-//        oneToOneChats.add("Alice");
-//        oneToOneChats.add("Bob");
-//        oneToOneChats.add("Charlie");
-//
-//        groupChats.add("Team Alpha");
-//        groupChats.add("Project Beta");
-//        groupChats.add("Gamers Unite");
-//
-//        // Combine all chats
-//        allChats.addAll(oneToOneChats);
-//        allChats.addAll(groupChats);
-//    }
-
     private void createLeftPanel() {
         leftPanel = new JPanel();
         leftPanel.setLayout(new GridLayout(8,1,5,5));
@@ -130,7 +115,12 @@ public class MainFrame extends JFrame {
             public void updateSearchResult(){
                 String query = searchField.getText().trim();
                 if(!query.isEmpty()){
-                    updateChatList(Objects.requireNonNull(SearchUsers.searchUser(query)));
+                    ArrayList<String> searchResults = SearchUsers.searchUser(query);
+                    if (searchResults != null) {
+                        updateChatList(searchResults);
+                    } else {
+                        updateChatList(new ArrayList<>()); // Show an empty list if search fails
+                    }
                 }else {
                     updateChatList(allChats);
                 }
@@ -188,8 +178,12 @@ public class MainFrame extends JFrame {
 
     private void updateChatList(ArrayList<String> chats) {
         chatListModel.clear();
-        for (String chat : chats) {
-            chatListModel.addElement(chat);
+        if(chats.isEmpty()){
+            chatListModel.addElement("No Chats are available. Start a conversation!");
+        }else {
+            for (String chat : chats) {
+                chatListModel.addElement(chat);
+            }
         }
     }
 

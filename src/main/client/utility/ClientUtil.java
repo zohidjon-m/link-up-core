@@ -16,9 +16,8 @@ public class ClientUtil {
     private PrintWriter out;
     private BufferedReader in;
     private Gson gson = new Gson();
-    ServerInfoInClient serverInfoInClient = new ServerInfoInClient();
-    String SERVER_ADDRESS = serverInfoInClient.getServer_address();
-    int SERVER_PORT = serverInfoInClient.getServer_port();
+    String SERVER_ADDRESS = ServerInfoInClient.getInstance().getServer_address();
+    int SERVER_PORT = ServerInfoInClient.getInstance().getServer_port();
 
     public ClientUtil(){
         try {
@@ -42,7 +41,7 @@ public class ClientUtil {
 
         // Read the json response from server
         String response = in.readLine();
-
+        System.out.println("response:"+response);
 
         return gson.fromJson(response, JsonObject.class);
     }

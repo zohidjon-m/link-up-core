@@ -23,8 +23,10 @@ public class ResponseHandler extends LinkUpServer {
             response.add(key, gson.toJsonTree(value));
         } else if (value != null) {
             response.add("value",gson.toJsonTree(value));
+
         }
         //send json response as a string
+        System.out.println(response);
         out.println(response.toString());
     }
 

@@ -85,10 +85,14 @@ public class FetchChats {
             data.add("oneToOneChats",oneToOneChats);
             data.add("groupChats",groupChats);
 
-            return data;
+
 
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            System.err.println("Error while fetching chats for user ID: " + currentUserId);
+            e.printStackTrace();
+            throw new RuntimeException("Database error: Unable to fetch chats", e);
         }
+
+        return data;
     }
 }

@@ -68,18 +68,23 @@ public class LinkUpServer {
                    }
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                // General I/O exception
+                System.err.println("I/O error occurred: " + e.getMessage());
+
+
             } finally {
                 //use to show online users; when they leave the application, remove them from
                 if (userId != -1) {
                     onlineUsers.remove(userId);
-                    System.out.println("User " + userId + " disconnected.");
+                    System.out.println("UserId: " + userId + " disconnected.");
 
                 }
                 try {
-                    socket.close();
+                    if (socket != null) socket.close();
+                    if (in != null) in.close();
+                    if (out != null) out.close();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    System.err.println("Error closing resources: " + e.getMessage());
                 }
             }
         }
@@ -99,7 +104,7 @@ public class LinkUpServer {
                     if(idOfUser != -1) {
                         userId = idOfUser;
                         onlineUsers.put(idOfUser, out);
-                        responseHandler.sendSuccessResponse("Login Successful","value",idOfUser);
+                        responseHandler.sendSuccessResponse("Login Successful","value",userId);
                     }else{
                         responseHandler.sendErrorResponse("User doesn't exist");
 
@@ -119,38 +124,48 @@ public class LinkUpServer {
                     JsonObject fetchedChats = new JsonObject();
                     fetchedChats =null;
                     //checking whether the currentUserId is exist or not
-                    if(!data.get("currentUserID").isJsonNull() || (data.has("currentUserID")&& (data.get("currentUserID").getAsInt()>0))){
+                    if(data.has("currentUserID") && !data.get("currentUserID").isJsonNull()){
+                        System.out.println("in server, fetch_chats case, currentuserId is sent ot Fetch Class");
                          fetchedChats = new FetchChats(connection).fetchChats(data.get("currentUserID").getAsInt());
-                    } else if(data.has("currentUserName")&& !data.get("currentUserName").isJsonNull()){
+                    } else if(data.has("currentUserName") && !data.get("currentUserName").isJsonNull()){
                         //
                        int userid = new FetchChats(connection).getUserIdByUserName(data.get("currentUserName").getAsString());
                         if(userid!=-1){
                             fetchedChats = new FetchChats(connection).fetchChats(data.get("currentUserID").getAsInt());
 
                         }
+                    }else{
+                        System.out.println("Both username and userid are null");
                     }
+
                     if(fetchedChats!=null){
-                        responseHandler.sendSuccessResponse(null,"data",fetchedChats);
+                        responseHandler.sendSuccessResponse("Chats are fetched successfully","data",fetchedChats);
                     }else{
                         responseHandler.sendErrorResponse("there is an error while fetching data from database");
                     }
 
                     break;
-//                case "FETCH_MESSAGES":
-//                    handleFetchMessages(data.get("chatId").getAsInt());
-//                    break;
-                case "SEARCH_USER":
+                case "FETCH_MESSAGES":
+
+
+                    break;
+                case "SEARCH_USERS":
                     JsonArray searchedUsers;
-                    searchedUsers = SearchUsers.searchUser(data.get("query").getAsString(),connection);
+                    searchedUsers = SearchUsers.searchUsers(data.get("query").getAsString(),connection);
                     if(searchedUsers!=null){
                         responseHandler.sendSuccessResponse("Keys are sent successful","searchedUsers",searchedUsers);
                     }else{
                         responseHandler.sendErrorResponse("there is an error during searching other users!");
                 }
                     break;
-//                case "SEARCH_USERS":
-//
-//                    break;
+                case "SEARCH_A_USER":
+                    int searchedUserID = SearchUsers.getIdOfUser(data.get("userName").getAsString(),connection);
+                    if(searchedUserID!=0){
+                        responseHandler.sendSuccessResponse("User's id is found, sending back","receiverId",searchedUserID);
+                    }else{
+                        responseHandler.sendErrorResponse("Couldn't find the user's id. There are some problem in server!");
+                    }
+                    break;
                 case "CREATE_GROUP":
                     //converting JsonArray to list
                     List<String> members = gson.fromJson(data.get("members"), new TypeToken<List<String>>() {}.getType());

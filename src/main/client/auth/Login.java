@@ -64,7 +64,8 @@ public class Login {
         loginButton.addActionListener(e -> {
             String username = usernameField.getText();
             String password = new String(userPasswordField.getPassword());
-
+            //add user because if it fails to fetch this user's id, it will use username
+            user = username;
             //construct the login request using json
             try {
                 ClientUtil client = new ClientUtil();
@@ -75,18 +76,20 @@ public class Login {
                 data.addProperty("username",username);
                 data.addProperty("password",password);
                 request.add("data",data);
-             //add user because if it fails to fetch this user's id, it will use username
-                user = username;
+
 
                 //Send the request and receive the response
                 JsonObject response = client.sendRequest(request);
                 if(ResponeHandler.checkResponse(response)){
+
                     if(response.has("value")&&(response.get("value").getAsInt() != 0)) {
-                        new ServerInfoInClient().setUserId(response.get("value").getAsInt());
+                        ServerInfoInClient.getInstance().setUserId(response.get("value").getAsInt());
+                        System.out.println("userID: "+ServerInfoInClient.getInstance().getUserId());
                         FrameManager.navigateTo(new MainFrame());
 
                     }else{
-                        new ServerInfoInClient().setUserNameOfCurrent(user);
+                        ServerInfoInClient.getInstance().setUserNameOfCurrent(user);
+
                         FrameManager.navigateTo(new MainFrame());
 
                     }

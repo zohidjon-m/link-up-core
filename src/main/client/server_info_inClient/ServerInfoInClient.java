@@ -6,6 +6,18 @@ public class ServerInfoInClient {
     private final int server_port = 4242;
     private int userId = 0;
     private String userNameOfCurrent;
+    private static ServerInfoInClient instance;
+
+    private ServerInfoInClient(){
+
+    }
+    //create singleton instance
+    public static ServerInfoInClient getInstance() {
+        if (instance == null) {
+            instance = new ServerInfoInClient();
+        }
+        return instance;
+    }
     public int getServer_port() {
         return server_port;
     }
