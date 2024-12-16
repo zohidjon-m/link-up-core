@@ -8,6 +8,7 @@ public class FrameManager {
     public static Stack<JFrame> frameStack = new Stack<>();
 
     //Add new frame
+
     public static void navigateTo(JFrame newFrame){
         if(!frameStack.isEmpty()) frameStack.peek().dispose();
 

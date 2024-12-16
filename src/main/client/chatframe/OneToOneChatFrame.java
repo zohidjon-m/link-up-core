@@ -11,7 +11,9 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.sql.Array;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
@@ -27,11 +29,9 @@ public class OneToOneChatFrame extends JFrame {
     private int receiverId = 0; // Receiver's user ID
     private String receiverName; // Receiver's username
 
-    private Thread messageListenerThread;
-
     ClientUtil clientUtil = new ClientUtil();
 
-    public OneToOneChatFrame(String receiverName) throws IOException {
+    public void OneToOneChat(String receiverName) throws IOException {
         this.currentUserId = ServerInfoInClient.getInstance().getUserId();
         this.receiverName = receiverName;
         this.receiverId = getReceiverId(receiverName);
@@ -55,11 +55,19 @@ public class OneToOneChatFrame extends JFrame {
         inputPanel.setLayout(new BorderLayout());
         messageField = new JTextField();
         messageField.addActionListener(e ->{
-            handleSendMessage();
+            try {
+                handleSendMessage();
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
         });
         sendButton = new JButton("Send");
         sendButton.addActionListener(e ->{
-            handleSendMessage();
+            try {
+                handleSendMessage();
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
         });
 
         inputPanel.add(messageField, BorderLayout.CENTER);
@@ -70,19 +78,8 @@ public class OneToOneChatFrame extends JFrame {
 
         // Load previous messages
         loadMessages();
-        startMessageListener();
 
-        addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent e) {
-                if (!sendExecutor.isShutdown()) {
-                    sendExecutor.shutdownNow();
-                }
-                if (!listenExecutor.isShutdown()) {
-                    listenExecutor.shutdownNow();
-                }
-            }
-        });
+
 
 
         setVisible(true);
@@ -108,73 +105,25 @@ public class OneToOneChatFrame extends JFrame {
                 throw new IOException("Missing 'receiverId' in the response data.");
             }
         } else {
-                throw new IOException("Missing 'data' field in the server response.");
+            throw new IOException("Missing 'data' field in the server response.");
         }
 
 
         // get user id by search user,
         return receiverID;
     }
-    private final ExecutorService sendExecutor = Executors.newSingleThreadExecutor(); // For sending messages
-    private final ExecutorService listenExecutor = Executors.newSingleThreadExecutor(); // For message listening
-
-    private void handleSendMessage() {
+    private void handleSendMessage() throws IOException {
         String messageContent = messageField.getText().trim();
-        if (!messageContent.isEmpty()) {
-            sendButton.setEnabled(false);
-            messageField.setEnabled(false);
+        if(!messageContent.isEmpty()){
+            sendMessage(messageContent);
 
-            sendExecutor.submit(() -> {
-                try {
-                    sendMessage(messageContent); // Send the message
-                    SwingUtilities.invokeLater(() -> {
-                        sendButton.setEnabled(true);
-                        messageField.setEnabled(true);
-                        addMessageToPanel(messageContent, true, String.valueOf(new Timestamp(System.currentTimeMillis())));
-                        messageField.setText(""); // Clear the input field
-                    });
-                } catch (IOException e) {
-                    SwingUtilities.invokeLater(() -> {
-                        JOptionPane.showMessageDialog(OneToOneChatFrame.this,
-                                "Failed to send the message: " + e.getMessage(),
-                                "Error",
-                                JOptionPane.ERROR_MESSAGE);
-                        sendButton.setEnabled(true);
-                        messageField.setEnabled(true);
-                    });
-                }
-            });
+            addMessageToPanel(messageContent, true, String.valueOf(new Timestamp(System.currentTimeMillis())));
+            messageField.setText("");
         }
+
     }
 
-
-
-
-    private void startMessageListener() {
-        listenExecutor.submit(() -> {
-            try {
-                System.out.println("Starting message listener...");
-                while (!Thread.currentThread().isInterrupted()) {
-                    String serverMessage = clientUtil.getInput(); // Listen for messages
-                    if (serverMessage != null && !serverMessage.isEmpty()) {
-                        JsonObject response = new Gson().fromJson(serverMessage, JsonObject.class);
-                        if (response.has("action") && "NEW_MESSAGE".equals(response.get("action").getAsString())) {
-                            String message = response.get("message").getAsString();
-                            int senderId = response.get("sender_id").getAsInt();
-                            SwingUtilities.invokeLater(() -> {
-                                addMessageToPanel(message, senderId == currentUserId, String.valueOf(new Timestamp(System.currentTimeMillis())));
-                            });
-                        }
-                    }
-                }
-            } catch (IOException e) {
-                System.err.println("Message listener stopped: " + e.getMessage());
-            }
-        });
-    }
-
-
-    private void addMessageToPanel(String messageContent, boolean isSender, String timestamp) {
+    public void addMessageToPanel(String messageContent, boolean isSender, String timestamp) {
         // Outer container for the entire message
         JPanel messageContainer = new JPanel(new BorderLayout());
         messageContainer.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10)); // Add spacing between messages
@@ -213,22 +162,22 @@ public class OneToOneChatFrame extends JFrame {
         avatarLabel.setOpaque(false);
 
         if (isSender) {
-//            avatarLabel.setIcon(new ImageIcon("path_to_sender_avatar.png")); // Set sender's avatar
-//            messageContainer.add(avatarLabel, BorderLayout.EAST);
+            avatarLabel.setIcon(new ImageIcon("path_to_sender_avatar.png")); // Set sender's avatar
+            messageContainer.add(avatarLabel, BorderLayout.EAST);
             messageContainer.add(messageBubble, BorderLayout.CENTER);
         } else {
-//            avatarLabel.setIcon(new ImageIcon("path_to_receiver_avatar.png")); // Set receiver's avatar
-//            messageContainer.add(avatarLabel, BorderLayout.WEST);
+            avatarLabel.setIcon(new ImageIcon("path_to_receiver_avatar.png")); // Set receiver's avatar
+            messageContainer.add(avatarLabel, BorderLayout.WEST);
             messageContainer.add(messageBubble, BorderLayout.CENTER);
         }
 
         // Add the container to the message panel
-        SwingUtilities.invokeLater(() -> {
-            messagePanel.add(messageContainer);
-            messagePanel.revalidate();
-            messagePanel.repaint();
-            scrollPane.getVerticalScrollBar().setValue(scrollPane.getVerticalScrollBar().getMaximum());
-        });
+        messagePanel.add(messageContainer);
+        messagePanel.revalidate();
+        scrollPane.getVerticalScrollBar().setValue(scrollPane.getVerticalScrollBar().getMaximum());
+
+
+
     }
 
 

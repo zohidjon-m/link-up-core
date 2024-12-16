@@ -15,16 +15,29 @@ import java.sql.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class LinkUpServer {
     private static final int PORT = 4242;
     protected static Connection connection;
-    private static Map<Integer, PrintWriter> onlineUsers = new HashMap<>(); // user_id -> output stream
+    private static Map<Integer, PrintWriter> onlineUsers = new ConcurrentHashMap<>(); // user_id -> output stream
 
     public static void main(String[] args) {
 
         // Connect to MySQL database
        connection =  new ConDB().connectToDatabase();
+        onlineUsers.clear();
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            System.out.println("Shutting down server...");
+            try {
+                if (connection != null && !connection.isClosed()) {
+                    connection.close();
+                    System.out.println("Database connection closed.");
+                }
+            } catch (SQLException e) {
+                System.err.println("Failed to close database connection: " + e.getMessage());
+            }
+        }));
 
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
             System.out.println("Server is running on port " + PORT);
@@ -72,7 +85,7 @@ public class LinkUpServer {
             } finally {
                 //use to show online users; when they leave the application, remove them from
                 if (userId != -1) {
-                    onlineUsers.remove(userId);
+//                    onlineUsers.remove(userId);
                     System.out.println("UserId: " + userId + " disconnected.");
 
                 }
@@ -100,7 +113,19 @@ public class LinkUpServer {
                     System.out.println(idOfUser);
                     if(idOfUser != -1) {
                         userId = idOfUser;
-                        onlineUsers.put(idOfUser, out);
+
+                        // Debugging: Ensure 'out' is not null
+                        if (out != null) {
+                            System.out.println("PrintWriter for user " + userId + " is valid.");
+                        } else {
+                            System.out.println("Error: PrintWriter for user " + userId + " is NULL!");
+                        }
+                        if (onlineUsers.containsKey(userId)) {
+                            onlineUsers.put(userId, out);
+                        }else{
+                            onlineUsers.put(idOfUser, out);
+                        }
+
                         responseHandler.sendSuccessResponse("Login Successful","value",userId);
                     }else{
                         responseHandler.sendErrorResponse("User doesn't exist");
@@ -158,8 +183,11 @@ public class LinkUpServer {
                     String message = data.get("messageContent").getAsString();
                     boolean saved = new SaveMessages().sendOneToOneMessage(senderId,receiverId,message,connection);
                     if(saved){
+
+
                         // Server: Send a new message to the recipient's socket
                         PrintWriter recipientOut = onlineUsers.get(receiverId); // Socket output stream of recipient
+                        System.out.println("receiver's outputStream "+recipientOut);
                         if (recipientOut != null) {
                             JsonObject newMessage = new JsonObject();
                             newMessage.addProperty("action", "NEW_MESSAGE");
@@ -167,7 +195,8 @@ public class LinkUpServer {
                             newMessage.addProperty("message", message);
 
                             recipientOut.println(newMessage.toString()); // Send message to recipient
-                            System.out.println("out : "+newMessage.toString());
+                            System.out.println("out : "+ newMessage);
+                            System.out.println("out m: "+newMessage.toString());
                             recipientOut.flush();
                         }
                         responseHandler.sendSuccessResponse("Message saved in db successfully");

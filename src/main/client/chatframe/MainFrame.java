@@ -25,6 +25,7 @@ public class MainFrame extends JFrame {
     private ArrayList<String> allChats;
     private ArrayList<String> oneToOneChats ;
     private ArrayList<String> groupChats;
+    private ArrayList<String> copyOfAll;
 
     public MainFrame() {
         setTitle("LinkUp");
@@ -37,6 +38,7 @@ public class MainFrame extends JFrame {
         // Initialize sample chat data
         FetchChats fetch = new FetchChats();
         allChats = fetch.getAllChats();
+        copyOfAll = (ArrayList<String>) allChats.clone();
         oneToOneChats = fetch.getOneToOneChats();
         groupChats = fetch.getGroupChats();
 
@@ -207,7 +209,7 @@ public class MainFrame extends JFrame {
 
     private void openChatFrame(String chatName) throws IOException {
 //        JOptionPane.showMessageDialog(this, "Opening chat with: " + chatName);
-        new OneToOneChatFrame(chatName);
+        new OneToOneChatFrame().OneToOneChat(chatName);
     }
 
     public static void main(String[] args) {

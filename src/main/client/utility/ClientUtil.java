@@ -2,6 +2,7 @@ package main.client.utility;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import main.client.chatframe.ReceiveMsg;
 import main.client.server_info_inClient.ServerInfoInClient;
 
 import javax.swing.*;
@@ -43,14 +44,15 @@ public class ClientUtil {
         String response = in.readLine();
         System.out.println("response:"+response);
 
-        return gson.fromJson(response, JsonObject.class);
+        JsonObject jsonResponse =  gson.fromJson(response, JsonObject.class);
+        System.out.println(jsonResponse);
+        if(jsonResponse.isJsonNull()&&jsonResponse.has("action")){
+            new ReceiveMsg().getReceiverMsg(jsonResponse);
+        }
+        return jsonResponse;
     }
 
     public void closeConnection() throws IOException {
         socket.close();
-    }
-
-    public String getInput() throws IOException {
-        return in.readLine();
     }
 }
