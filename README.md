@@ -1,4 +1,4 @@
-#Real Time Chatting Application
+# Real Time Chatting Application
 
 LinkUp is Real Time Chatting Application, which provides one-to-one and group chatting features. It is built on top of Socket. 
 
