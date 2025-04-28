@@ -22,7 +22,7 @@ The system is built from scratch without using external networking frameworks li
 
   ## How to Run
 1. Configure MySQL database connection settings in server code.
-2. Start the server by running `Main.java` (Server mode).
+2. Start the server by running `LinkUpServer.java` (Server mode).
 3. Launch the client application by running `LinkUpClient.java`.
 4. Connect clients to server using server IP address and designated port.
 
